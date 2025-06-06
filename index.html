@@ -222,12 +222,23 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
       100% { transform: rotate(360deg); }
     }
   </style>
-<link rel="modulepreload" href="/rqsm-388c5fb8c5365baf.js" crossorigin="anonymous" integrity="sha384-cwbmTMk3nfRenvcVK4PtiNhcBuHK+rGYhpr2g2sLg/GfEjUwxNhbBLhWKshsnlS9"><link rel="preload" href="/rqsm-388c5fb8c5365baf_bg.wasm" crossorigin="anonymous" integrity="sha384-y9xP6aYig4+E8NvhdM1Yl74DS1BeiNqtPyf9/9d1LtWWbJWnLsfifrBLTyuEpsbg" as="fetch" type="application/wasm"><link rel="modulepreload" href="/rqsm-388c5fb8c5365baf.js" crossorigin="anonymous" integrity="sha384-cwbmTMk3nfRenvcVK4PtiNhcBuHK+rGYhpr2g2sLg/GfEjUwxNhbBLhWKshsnlS9"><link rel="preload" href="/rqsm-388c5fb8c5365baf_bg.wasm" crossorigin="anonymous" integrity="sha384-Ob0hvzzXNa/9cBqmVvhuPQzfheJYT0gVSvMP5aIxs52XTet2BGJpwEzjKYEjtdbO" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/rqsm-388c5fb8c5365baf.js" crossorigin="anonymous" integrity="sha384-cwbmTMk3nfRenvcVK4PtiNhcBuHK+rGYhpr2g2sLg/GfEjUwxNhbBLhWKshsnlS9"><link rel="preload" href="/rqsm-388c5fb8c5365baf_bg.wasm" crossorigin="anonymous" integrity="sha384-y9xP6aYig4+E8NvhdM1Yl74DS1BeiNqtPyf9/9d1LtWWbJWnLsfifrBLTyuEpsbg" as="fetch" type="application/wasm"><link rel="modulepreload" href="/rqsm-388c5fb8c5365baf.js" crossorigin="anonymous" integrity="sha384-cwbmTMk3nfRenvcVK4PtiNhcBuHK+rGYhpr2g2sLg/GfEjUwxNhbBLhWKshsnlS9"><link rel="preload" href="/rqsm-388c5fb8c5365baf_bg.wasm" crossorigin="anonymous" integrity="sha384-Ob0hvzzXNa/9cBqmVvhuPQzfheJYT0gVSvMP5aIxs52XTet2BGJpwEzjKYEjtdbO" as="fetch" type="application/wasm"><link rel="modulepreload" href="/rqsm-388c5fb8c5365baf.js" crossorigin="anonymous" integrity="sha384-cwbmTMk3nfRenvcVK4PtiNhcBuHK+rGYhpr2g2sLg/GfEjUwxNhbBLhWKshsnlS9"><link rel="preload" href="/rqsm-388c5fb8c5365baf_bg.wasm" crossorigin="anonymous" integrity="sha384-Ob0hvzzXNa/9cBqmVvhuPQzfheJYT0gVSvMP5aIxs52XTet2BGJpwEzjKYEjtdbO" as="fetch" type="application/wasm"></head>
 <body>
   <div id="main"></div>
   <div id="spinner" class="spinner"></div>
   <div class="status-bar" id="status-bar"></div>
 
+<script type="module">
+import init, * as bindings from '/rqsm-388c5fb8c5365baf.js';
+const wasm = await init({ module_or_path: '/rqsm-388c5fb8c5365baf_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
 <script type="module">
 import init, * as bindings from '/rqsm-388c5fb8c5365baf.js';
 const wasm = await init({ module_or_path: '/rqsm-388c5fb8c5365baf_bg.wasm' });
