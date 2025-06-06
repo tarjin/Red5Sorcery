@@ -1,0 +1,6 @@
+[build]
+target = "index.html"
+
+[[copy]]
+source = "static"
+dest = "static"
