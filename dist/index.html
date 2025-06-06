@@ -4,7 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Red5Sorcery</title>
-   <link data-trunk rel="rust" href="Cargo.toml" />
+   
+<script type="module">
+import init, * as bindings from '/rqsm-e2e46f1e71887d8a.js';
+const wasm = await init({ module_or_path: '/rqsm-e2e46f1e71887d8a_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
   <style>
     body {
       margin: 0;
@@ -211,7 +222,7 @@
       100% { transform: rotate(360deg); }
     }
   </style>
-</head>
+<link rel="modulepreload" href="/rqsm-e2e46f1e71887d8a.js" crossorigin="anonymous" integrity="sha384-ZMe0fa+qs/+1AcQ/HjUmFfYIwTfQEMBKYE0r6AoREIcWeGRoRR8+pGZM+rXGDSWM"><link rel="preload" href="/rqsm-e2e46f1e71887d8a_bg.wasm" crossorigin="anonymous" integrity="sha384-9wK0tYzaTsLjvAMUozKd4PQgOfpvQQGlJWlatWEj6BklpnTUNIDv0lokBkmjIgbL" as="fetch" type="application/wasm"></head>
 <body>
   <div id="main"></div>
   <div id="spinner" class="spinner"></div>
