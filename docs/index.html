@@ -4,50 +4,66 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Red5Sorcery</title>
-
+  
+  <!-- Manually prefix the JS/WASM imports with /Red5Sorcery/ -->
   <script type="module">
-    import init, * as bindings from '/Red5Sorcery/rqsm-e2e46f1e71887d8a.js';
-    const wasm = await init({ module_or_path: '/Red5Sorcery/rqsm-e2e46f1e71887d8a_bg.wasm' });
-
+    import init, * as bindings from '/Red5Sorcery/rqsm-eded2d14bf593a04.js';
+    const wasm = await init({ module_or_path: '/Red5Sorcery/rqsm-eded2d14bf593a04_bg.wasm' });
     window.wasmBindings = bindings;
-
-    dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+    dispatchEvent(new CustomEvent("TrunkApplicationStarted", { detail: { wasm } }));
   </script>
 
   <style>
+    /* ─── 1) Keep the title near the very top ─── */
     body {
       margin: 0;
       padding: 0;
-      background-color:#3C0009;
+      /* Still 0.5rem to pull the <h1> up */
+      padding-top: 0.5rem;
+      background-color: #3C0009;
       font-family: 'Inter', 'Segoe UI', sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start; /* 👈 changed from center */
+      justify-content: flex-start;
       color: #ffffff;
       text-align: center;
     }
-    
+
+    /* ─── 2) Slightly reduced top‐padding inside .page ─── */
     .page {
-      padding-top: 1rem;
+      padding-top: 0.5rem;
+      padding-bottom: 2rem;
       width: 100%;
       max-width: 640px;
+      margin: 0 auto;
     }
 
+    /* ─── 3) Title styling (unchanged) ─── */
     .title {
       font-size: 3rem;
       font-weight: bold;
       color: #dd2244;
-      margin-bottom: 1rem;
+      margin-top: 0;
+      margin-bottom: 0.15rem;  /* keeps the subtitle close */
     }
 
+    /* ─── 4) Subtitle styling: reduce bottom margin to 0.25rem ─── */
+    .subtitle {
+      margin-top: 0;
+      margin-bottom: 0.25rem;   /* was 0.5rem, now 0.25rem */
+      font-size: 0.875rem;
+      color: #cccccc;
+    }
+
+    /* ─── 5) Button groups (unchanged) ─── */
     .button-group {
       display: flex;
       flex-wrap: wrap;
       gap: 1rem;
       justify-content: center;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
     }
 
     .btn {
@@ -74,12 +90,18 @@
       opacity: 0.6;
     }
 
-    .btn-success { background-color: #005533; }
+    .btn-success {
+      background-color: #005533;
+    }
 
+    /* ─── 6) Use-case card: reduce top margin to 0.1rem ─── */
     .use-case-card {
       width: 100%;
       max-width: 500px;
-      margin: 1.5rem auto;
+      margin-top: 0.1rem;      /* was 0.25rem, now 0.1rem */
+      margin-bottom: 0.25rem;
+      margin-left: auto;
+      margin-right: auto;
       background-color: #3C0009;
       color: #999999;
       padding: 2rem;
@@ -95,7 +117,7 @@
       color: #94a3b8;
       transition: opacity 0.5s ease-in-out;
       text-align: center;
-      margin-top: 2rem;
+      margin-top: 1rem;  /* keeps text inside the card spaced normally */
       padding: 0 1rem;
     }
 
@@ -123,8 +145,10 @@
       border-radius: 9999px;
       border: none;
       cursor: pointer;
-      margin: 0.5rem auto 0;
+      margin-top: 0.5rem;
       display: block;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .upload-button:hover { background-color: #374151; }
@@ -146,12 +170,13 @@
       color: #87a5b3;
       font-size: 0.75rem;
       font-weight: 600;
-      margin: 1rem auto 1.25rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.75rem;
       text-align: center;
     }
 
     .fine-print {
-      margin-top: 3rem;
+      margin-top: 2rem;
       font-size: 0.75rem;
       color: #cccccc;
     }
@@ -198,12 +223,146 @@
     }
   </style>
 
-  <link rel="modulepreload" href="/Red5Sorcery/rqsm-e2e46f1e71887d8a.js" crossorigin="anonymous" integrity="sha384-ZMe0fa+qs/+1AcQ/HjUmFfYIwTfQEMBKYE0r6AoREIcWeGRoRR8+pGZM+rXGDSWM">
-  <link rel="preload" href="/Red5Sorcery/rqsm-e2e46f1e71887d8a_bg.wasm" crossorigin="anonymous" integrity="sha384-9wK0tYzaTsLjvAMUozKd4PQgOfpvQQGlJWlatWEj6BklpnTUNIDv0lokBkmjIgbL" as="fetch" type="application/wasm">
+  <!-- Manually prefix the modulepreload/preload URLs as well -->
+  <link rel="modulepreload"
+        href="/Red5Sorcery/rqsm-eded2d14bf593a04.js"
+        crossorigin="anonymous"
+        integrity="sha384-1B75s1CA19SGcybrOZzFiBEY6MHV/W78/8UCPd35+CiAMF8duMdb1T/9+79qB8HP">
+  <link rel="preload"
+        href="/Red5Sorcery/rqsm-eded2d14bf593a04_bg.wasm"
+        as="fetch"
+        type="application/wasm"
+        crossorigin="anonymous"
+        integrity="sha384-L6I9toeTbf8P3i4Bx5lJu1G/kwMrhRGpb9IdtNWI/D5OlpzxJ5CuXJzw2MJwLz0m">
 </head>
+
 <body>
-  <div id="main"></div>
-  <div id="spinner" class="spinner"></div>
-  <div class="status-bar" id="status-bar"></div>
+  <div class="page">
+    <!-- Sycamore will mount your <h1> and <p> (title & subtitle) here -->
+    <div id="main"></div>
+
+    <!-- spinner & status-bar remain unchanged -->
+    <div id="spinner" class="spinner"></div>
+    <div class="status-bar" id="status-bar"></div>
+  </div>
+
+  <!-- Trunk’s hot-reload script (unchanged) -->
+  <script>
+    "use strict";
+
+    (function () {
+      const address = '{{__TRUNK_ADDRESS__}}';
+      const base = '{{__TRUNK_WS_BASE__}}';
+      let protocol = '';
+      protocol =
+          protocol
+              ? protocol
+              : window.location.protocol === 'https:'
+                  ? 'wss'
+                  : 'ws';
+      const url = protocol + '://' + address + base + '.well-known/trunk/ws';
+
+      class Overlay {
+          constructor() {
+              this._overlay = document.createElement("div");
+              const style = this._overlay.style;
+              style.height = "100vh";
+              style.width = "100vw";
+              style.position = "fixed";
+              style.top = "0";
+              style.left = "0";
+              style.backgroundColor = "rgba(222, 222, 222, 0.5)";
+              style.fontFamily = "sans-serif";
+              style.zIndex = "1000000";
+              style.backdropFilter = "blur(1rem)";
+
+              const container = document.createElement("div");
+              container.style.position = "absolute";
+              container.style.top = "30%";
+              container.style.left = "15%";
+              container.style.maxWidth = "85%";
+
+              this._title = document.createElement("div");
+              this._title.innerText = "Build failure";
+              this._title.style.paddingBottom = "2rem";
+              this._title.style.fontSize = "2.5rem";
+
+              this._message = document.createElement("div");
+              this._message.style.whiteSpace = "pre-wrap";
+
+              const icon = document.createElement("div");
+              icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#dc3545" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>';
+              this._title.prepend(icon);
+
+              container.append(this._title, this._message);
+              this._overlay.append(container);
+
+              this._inject();
+              window.setInterval(() => {
+                  this._inject();
+              }, 250);
+          }
+
+          set reason(reason) {
+              this._message.textContent = reason;
+          }
+
+          _inject() {
+              if (!this._overlay.isConnected) {
+                  document.body?.prepend(this._overlay);
+              }
+          }
+      }
+
+      class Client {
+          constructor(url) {
+              this.url = url;
+              this.poll_interval = 5000;
+              this._overlay = null;
+          }
+
+          start() {
+              const ws = new WebSocket(this.url);
+              ws.onmessage = (ev) => {
+                  const msg = JSON.parse(ev.data);
+                  switch (msg.type) {
+                      case "reload":
+                          this.reload();
+                          break;
+                      case "buildFailure":
+                          this.buildFailure(msg.data)
+                          break;
+                  }
+              };
+              ws.onclose = () => this.onclose();
+          }
+
+          onclose() {
+              window.setTimeout(
+                  () => {
+                      const ws = new WebSocket(this.url);
+                      ws.onopen = () => window.location.reload();
+                      ws.onclose = () => this.onclose();
+                  },
+                  this.poll_interval);
+          }
+
+          reload() {
+              window.location.reload();
+          }
+
+          buildFailure({reason}) {
+              console.error("Build failed:", reason);
+              if (!this._overlay) {
+                  this._overlay = new Overlay();
+              }
+              this._overlay.reason = reason;
+          }
+      }
+
+      new Client(url).start();
+
+    })();
+  </script>
 </body>
 </html>
