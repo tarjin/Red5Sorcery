@@ -5,26 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Red5Sorcery</title>
 
-  <!-- Load the hashed JS from GitHub Pages under /Red5Sorcery/ -->
-  <script type="module" src="/Red5Sorcery/rqsm-e2e46f1e71887d8a.js"></script>
+  <script type="module">
+    import init, * as bindings from '/Red5Sorcery/rqsm-e2e46f1e71887d8a.js';
+    const wasm = await init({ module_or_path: '/Red5Sorcery/rqsm-e2e46f1e71887d8a_bg.wasm' });
 
-  <!-- Existing preload tags (no change) -->
-  <link rel="modulepreload"
-        href="/Red5Sorcery/rqsm-e2e46f1e71887d8a.js"
-        crossorigin="anonymous"
-        integrity="sha384-ZMe0fa+qs/+1AcQ/HjUmFfYIwTfQEMBKYE0r6AoREIcWeGRoRR8+pGZM+rXGDSWM">
-  <link rel="preload"
-        href="/Red5Sorcery/rqsm-e2e46f1e71887d8a_bg.wasm"
-        as="fetch"
-        type="application/wasm"
-        crossorigin="anonymous"
-        integrity="sha384-jZvgM13OfCWXtzJ8ENZhVpofMCjCh4caPWICTaGjxE+uPrcT1eqQFswP5IZsgkrc">
+    window.wasmBindings = bindings;
+
+    dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+  </script>
 
   <style>
     body {
       margin: 0;
       padding: 0;
-      background-color: #3C0009; /* deep maroon */
+      background-color:#3C0009;
       font-family: 'Inter', 'Segoe UI', sans-serif;
       min-height: 100vh;
       display: flex;
@@ -35,9 +29,7 @@
       text-align: center;
     }
 
-    .page {
-      padding: 2rem;
-    }
+    .page { padding: 2rem; }
 
     .title {
       font-size: 3rem;
@@ -78,39 +70,32 @@
       opacity: 0.6;
     }
 
-    .btn-success {
-      background-color: #005533;
-    }
+    .btn-success { background-color: #005533; }
 
     .use-case-card {
       width: 100%;
       max-width: 500px;
-      margin-top: 1.5rem;
-      margin-bottom: 1.5rem;
-      margin-left: auto;
-      margin-right: auto;
+      margin: 1.5rem auto;
       background-color: #3C0009;
-      color: #999999; /* matches status message tone */
+      color: #999999;
       padding: 2rem;
       border-radius: 12px;
-      font-size: 0.875rem; /* same as status bar (14px) */
+      font-size: 0.875rem;
       line-height: 1.6;
       text-align: center;
       box-sizing: border-box;
     }
 
     .use-case-text {
-      font-size: 0.75rem; /* match status bar size */
-      color: #94a3b8;     /* same as the status bar color */
+      font-size: 0.75rem;
+      color: #94a3b8;
       transition: opacity 0.5s ease-in-out;
       text-align: center;
       margin-top: 2rem;
       padding: 0 1rem;
     }
 
-    .fadeout {
-      opacity: 0;
-    }
+    .fadeout { opacity: 0; }
 
     .unlock-button {
       background-color: #071d10;
@@ -124,9 +109,7 @@
       border: none;
     }
 
-    .unlock-button:hover {
-      background-color: #1f7a45;
-    }
+    .unlock-button:hover { background-color: #1f7a45; }
 
     .upload-button {
       background-color: #1f2937;
@@ -136,15 +119,11 @@
       border-radius: 9999px;
       border: none;
       cursor: pointer;
-      margin-top: 0.5rem;
+      margin: 0.5rem auto 0;
       display: block;
-      margin-left: auto;
-      margin-right: auto;
     }
 
-    .upload-button:hover {
-      background-color: #374151;
-    }
+    .upload-button:hover { background-color: #374151; }
 
     input[type="file"] {
       background-color: #111827;
@@ -163,9 +142,8 @@
       color: #87a5b3;
       font-size: 0.75rem;
       font-weight: 600;
-      margin-top: 1rem;
+      margin: 1rem auto 1.25rem;
       text-align: center;
-      margin-bottom: 1.25rem; /* balanced spacing */
     }
 
     .fine-print {
@@ -179,9 +157,7 @@
       text-decoration: underline;
     }
 
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
 
     .author-note-input {
       background-color: #222222;
@@ -197,9 +173,7 @@
       font-size: 1rem;
     }
 
-    .symmetric-spacing {
-      margin-top: 20px;
-    }
+    .symmetric-spacing { margin-top: 20px; }
 
     .spinner {
       border: 4px solid rgba(255, 255, 255, 0.2);
@@ -212,26 +186,20 @@
       display: none;
     }
 
-    .spinner.show {
-      display: block;
-    }
+    .spinner.show { display: block; }
 
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
   </style>
-</head>
 
+  <link rel="modulepreload" href="/Red5Sorcery/rqsm-e2e46f1e71887d8a.js" crossorigin="anonymous" integrity="sha384-ZMe0fa+qs/+1AcQ/HjUmFfYIwTfQEMBKYE0r6AoREIcWeGRoRR8+pGZM+rXGDSWM">
+  <link rel="preload" href="/Red5Sorcery/rqsm-e2e46f1e71887d8a_bg.wasm" crossorigin="anonymous" integrity="sha384-9wK0tYzaTsLjvAMUozKd4PQgOfpvQQGlJWlatWEj6BklpnTUNIDv0lokBkmjIgbL" as="fetch" type="application/wasm">
+</head>
 <body>
   <div id="main"></div>
   <div id="spinner" class="spinner"></div>
   <div class="status-bar" id="status-bar"></div>
-
-  <!--
-    Removed the inline import block here, since the hashed rqsm-*.js
-    is now loaded above. Trunk will mount the app automatically.
-  -->
-
 </body>
 </html>
