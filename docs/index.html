@@ -5,14 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Red5Sorcery</title>
 
+  <!-- Bootloader -->
   <script type="module">
-    import init, * as bindings from '/Red5Sorcery/rqsm-1ddafc3cdf57ec8a.js';
-    const wasm = await init({ module_or_path: '/Red5Sorcery/rqsm-1ddafc3cdf57ec8a_bg.wasm' });
-
+    import init, * as bindings from '/Red5Sorcery/rqsm-63ddba8a49f3ee6c.js';
+    const wasm = await init({ module_or_path: '/Red5Sorcery/rqsm-63ddba8a49f3ee6c_bg.wasm' });
     window.wasmBindings = bindings;
-
     dispatchEvent(new CustomEvent("TrunkApplicationStarted", { detail: { wasm } }));
   </script>
+
+  <!-- Preload assets -->
+  <link rel="modulepreload" href="/Red5Sorcery/rqsm-63ddba8a49f3ee6c.js">
+  <link rel="preload" href="/Red5Sorcery/rqsm-63ddba8a49f3ee6c_bg.wasm" as="fetch" type="application/wasm" crossorigin="anonymous">
 
   <style>
     /* ─── 1) Keep the title near the very top ─── */
@@ -118,7 +121,7 @@
       color: #94a3b8;
       transition: opacity 0.5s ease-in-out;
       text-align: center;
-      margin-top: 1rem;  /* keeps text inside the card spaced normally */
+      margin-top: 1rem;
       padding: 0 1rem;
     }
 
@@ -223,17 +226,6 @@
       100% { transform: rotate(360deg); }
     }
   </style>
-
-<link rel="modulepreload"
-        href="/Red5Sorcery/rqsm-1ddafc3cdf57ec8a.js"
-        crossorigin="anonymous"
-        integrity="sha384-1B75s1CA19SGcybrOZzFiBEY6MHV/W78/8UCPd35+CiAMF8duMdb1T/9+79qB8HP">
-<link rel="preload"
-        href="/Red5Sorcery/rqsm-1ddafc3cdf57ec8a_bg.wasm"
-        crossorigin="anonymous"
-        integrity="sha384-dEmHPX97MnfoGqXClHwadPe/RaBxvqa1dgHDNG1CSQviyvqXtb6I9DffmNMTQCVd"
-        as="fetch"
-        type="application/wasm">
 </head>
 <body>
   <div class="page">
@@ -241,5 +233,20 @@
     <div id="spinner" class="spinner"></div>
     <div class="status-bar" id="status-bar"></div>
   </div>
+
+  <script>
+    "use strict";
+    (function () {
+      const address = '{{__TRUNK_ADDRESS__}}';
+      const base = '{{__TRUNK_WS_BASE__}}';
+      let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const url = `${protocol}://${address}${base}.well-known/trunk/ws`;
+
+      class Overlay { /* unchanged */ }
+      class Client { /* unchanged */ }
+
+      new Client(url).start();
+    })();
+  </script>
 </body>
 </html>
