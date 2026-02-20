@@ -74,14 +74,16 @@ pub fn start() {
     // ✅ Render Sycamore UI
     sycamore::render(|cx| {
         let use_cases = vec![
-            "Hide a Zip file in a color image. Two images, with a cloaked zip file, will be downloaded in color and grayscale.",
-            "Best practice: store each image in separate locations for the highest security.",
-            "You need both the color and grayscale image to extract the cloaked zip file and author notes.",
-            "This web app is best suited for desktops, laptops, and tablets. Opera, Chrome, and Edge, are recommended browsers.",
-            "A secret love letter. Two images hold everything: words, music, memories—just for them.",
-            "A whistleblower hides proof of corruption, split across image fragments—safe until all pieces find the right hands.",
-            "A refugee carries vital family records hidden safely inside two photographs.",
-            "An artist embeds a banned poem into an album cover, preserving forbidden words for future generations."
+            "1. Designed for desktops and laptops. Modern browsers like Edge, Opera, or Chrome are recommended.",
+            "2. Runs completely offline in the browser without any servers or sign-ups. Nothing identifies you or is stored.",
+            "3. This app cloaks a ZIP file inside a PNG image and outputs both a color and grayscale twin. Both images are required to recover the hidden data.",
+            "4. Each image alone looks normal. Only together can the cloaked content be restored.",
+            "5. Best practice: store the two output images in separate locations or devices.",
+            "6. Avoid keeping both image fragments on the same computer. Separation strengthens structural security.",
+            "7. For sensitive material, use offline storage. Overwrite then delete image files from Downloads.",
+            "8. FREE tier requires images at least 3072 × 4096 pixels and supports ZIP files up to 6 MB.",
+            "9. PRO tier requires images at least 5312 × 7082 pixels and supports ZIP files up to 20 MB.",
+            "10. VEGAS tier requires images at least 6912 × 9216 pixels and supports ZIP files up to 40 MB.",
         ];
         let len = use_cases.len();
 
@@ -133,13 +135,19 @@ pub fn start() {
         view! { cx,
             div(class="page") {
                 h1(class="title") { "Red5Sorcery" }
-                p(class="fine-print", style="margin-top: 0;") { "Some secrets are for your eyes only" }
+                p(class="subtitle") { "Cloak ZIPs in PNG images • Free personal use • Commercial license required" }
 
-                div(class="button-group mt-8") {
+                div(class="use-case-card") {
+                    div(class=if *fading.get() { "use-case-text fadeout" } else { "use-case-text" }) {
+                        (use_cases[*idx.get()])
+                    }
+                }
+
+                div(class="button-group") {
                     button(
                         class="btn",
                         on:click={ move |_| get_input_by_id("zip-input").click() }
-                    ) { "Choose Zip" }
+                    ) { "Choose ZIP" }
 
                     input(
                         id="zip-input",
@@ -166,7 +174,7 @@ pub fn start() {
                     input(
                         id="image-input",
                         type="file",
-                        accept=".png,jpg,jpeg",
+                        accept=".png",
                         style="display: none;",
                         on:change={
                             let current_tier = current_tier.clone();
@@ -220,7 +228,7 @@ pub fn start() {
                     input(
                         id="image1-input",
                         type="file",
-                        accept=".png,.jpg,.jpeg",
+                        accept=".png",
                         style="display: none;",
                         on:change={
                             let image1_file = image1_file.clone();
@@ -249,7 +257,7 @@ pub fn start() {
                     input(
                         id="image2-input",
                         type="file",
-                        accept=".png,.jpg,.jpeg",
+                        accept=".png",
                         style="display: none;",
                         on:change={
                             let image1_file = image1_file.clone();
@@ -341,25 +349,24 @@ pub fn start() {
 
                 }
 
-                footer(class="fine-print text-center mt-12") {
-                    "Powered by RQSM"
+                footer(class="fine-print text-center") {
+                    "Powered by RQSM™"
                     br() "(Red5Sorcery Quantum Security Model)"
                     br() "A Canadian Innovation"
                     br()
                     a(href="https://red5sorcery-termsofuse.blogspot.com/2025/05/terms-of-use-and-privacy-notice.html", target="_blank", style="color:inherit; text-decoration:underline;") {
                         "Terms of Use"
                     }
-                    br() "Buy the book and source code (coming soon)"
+                    br()
+                    a(href="https://TheSocialCredit.etsy.com", target="_blank", style="color:inherit; text-decoration:underline;") {
+                    "Buy the book and source code"
+                    }
                     a(href="https://red5sorceryhelp.blogspot.com", target="_blank", style="color:inherit; text-decoration:underline; display:block; margin-top:1rem;") {
                         "Help"
                     }
                 }
 
-                div(class="use-case-card mt-12") {
-                    div(class=if *fading.get() { "use-case-text fadeout" } else { "use-case-text" }) {
-                        (use_cases[*idx.get()])
-                    }
-                }
+
             }
         }
     });
@@ -420,7 +427,7 @@ fn handle_image_file(
     let onload = Closure::wrap(Box::new(move || {
         let (min_w, min_h) = match tier_val.as_str() {
             "PRO" => (5312, 7082),
-            "VEGAS" => (6144, 8192),
+            "VEGAS" => (6912, 9216),
             _ => (3072, 4096),
         };
 
@@ -436,7 +443,7 @@ fn handle_image_file(
         } else {
             image_valid.set(true);
             status_message.set(format!(
-                "Image accepted: Click Cloak if enabled, or choose a Zip to cloak.",
+                "Image accepted: Click Cloak if enabled, or choose a ZIP to cloak.",
             ));
         }
     }) as Box<dyn FnMut()>);
