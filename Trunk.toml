@@ -1,9 +1,7 @@
 [build]
 target = "index.html"
+public_url = "/Red5Sorcery/"
 
 [[copy]]
 source = "static"
 dest = "static"
-
-[output]
-public_url = "/Red5Sorcery/"
