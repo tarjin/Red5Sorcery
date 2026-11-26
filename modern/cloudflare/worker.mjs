@@ -26,7 +26,7 @@ export default {async fetch(req,env){
    const country=typeof req.cf?.country==='string'&&/^[A-Z]{2}$/.test(req.cf.country)?req.cf.country:null;
    await env.DB.prepare('INSERT INTO usage_events(event,tier,country) VALUES(?,?,?)').bind(d.event,d.tier??null,country).run();
   }else if(path==='/feedback'){
-   if(!exact(d,['score','comment'])||!Number.isInteger(d.score)||d.score<0||d.score>10||!text(d.comment,2000))return json(400,{ok:false});
+   if(!exact(d,['score','comment'])||!Number.isInteger(d.score)||d.score<0||d.score>10||!text(d.comment,2000)||d.comment.trim().length<15)return json(400,{ok:false});
    await env.DB.prepare('INSERT INTO nps_feedback(score,comment) VALUES(?,?)').bind(d.score,d.comment.trim()).run();
   }else{
    if(!exact(d,['name','email','organization','message'])||!text(d.name,150)||!text(d.email,254)||!/^\S+@[^\s@]+\.[^\s@]+$/.test(d.email)||!text(d.message,4000)||(d.organization!==undefined&&(typeof d.organization!=='string'||d.organization.length>200)))return json(400,{ok:false});
