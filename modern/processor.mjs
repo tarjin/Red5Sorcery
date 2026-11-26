@@ -1,0 +1,8 @@
+import init,{cloak_local,decloak_local} from './pkg/rqsm.js';
+const ready=init();
+const safeErrors=new Set(['ZIP size outside supported range.','Invalid ZIP filename.','ZIP signature not recognized.','Cover must be PNG or JPEG.','Cover image could not be decoded.','Cover image would exceed 65% pixel utilization.','Unsupported image dimensions.','Image exceeds supported pixel limits or is too small.','Both images must be PNG.','Colour PNG could not be decoded.','Grayscale PNG could not be decoded.','Image dimensions differ.','Invalid metadata; check the original image pair and order.','Invalid or unsupported payload size.','Recovery failed: invalid payload.','Recovered ZIP signature not recognized.','PNG encoding failed.','Cloaking failed.','Filename or author note exceeds 100 UTF-8 bytes.']);
+ready.then(()=>postMessage({type:'ready'}),()=>postMessage({type:'unavailable'}));
+self.onmessage=async({data:m})=>{if(!['cloak','decloak'].includes(m.type))return;try{await ready;
+if(m.type==='cloak'){const [colour,gray]=cloak_local(new Uint8Array(m.zip),m.filename,new Uint8Array(m.cover),m.note);postMessage({type:'result',id:m.id,colour,gray},[colour.buffer,gray.buffer]);}
+else{const [zip,timestamp,filename,note]=decloak_local(new Uint8Array(m.colour),new Uint8Array(m.gray));postMessage({type:'result',id:m.id,zip,timestamp,filename,note},[zip.buffer]);}
+}catch(e){const msg=typeof e==='string'&&safeErrors.has(e)?e:'Processing failed. Check the selected files and available device memory.';postMessage({type:'failure',id:m.id,message:msg});}};
