@@ -5,7 +5,7 @@ on:
     paths: ['modern/**', '.github/workflows/modern-validation.yml']
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -50,7 +50,27 @@ jobs:
           test "$(git hash-object dist/classic/index.html)" = "$(git rev-parse "$classic:dist/index.html")"
           grep -Fq 'href="/classic/"' dist/index.html
           touch dist/.nojekyll
+          printf '%s\n' 'cloakyoursecrets.com' > dist/CNAME
       - uses: actions/upload-artifact@v4
         with:
           name: CloakYourSecrets-modern
           path: dist/
+          include-hidden-files: true
+
+      - name: Stage production branch (one-time release)
+        if: github.event.head_commit.message == 'CYS-009: Stage validated production site with preserved Classic'
+        run: |
+          set -euo pipefail
+          release=release/cys-009
+          if git ls-remote --exit-code --heads origin "$release" >/dev/null; then
+            echo "Release branch already exists; refusing to overwrite it."
+            exit 1
+          fi
+          git fetch --no-tags --depth=1 origin ace6576e9979d624f078121419a19b5db2c8ad76
+          site="$RUNNER_TEMP/cys009-site"
+          git worktree add --detach "$site" ace6576e9979d624f078121419a19b5db2c8ad76
+          git -C "$site" rm -rf .
+          cp -a dist/. "$site/"
+          git -C "$site" add -A
+          git -C "$site" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "CYS-009: validated modern site and original Classic"
+          git -C "$site" push origin "HEAD:refs/heads/$release"
