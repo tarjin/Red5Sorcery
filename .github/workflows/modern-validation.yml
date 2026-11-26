@@ -33,6 +33,7 @@ jobs:
           node --check modern/cloudflare/worker.mjs
       - name: Assemble static package
         run: |
+          rm -rf dist
           mkdir -p dist
           cp modern/index.html modern/*.mjs modern/announcements.json modern/favicon.svg modern/CloakYourSecrets_Help.pdf dist/
           cp -r modern/pkg dist/
@@ -45,12 +46,12 @@ jobs:
           git show "$classic:dist/index.html" > dist/classic/index.html
           for asset in rqsm-77afaf0d90970a1d.js rqsm-77afaf0d90970a1d_bg.wasm; do
             git show "$classic:dist/$asset" > "dist/Red5Sorcery/$asset"
+            cp "dist/Red5Sorcery/$asset" "dist/$asset"
             test "$(git hash-object "dist/Red5Sorcery/$asset")" = "$(git rev-parse "$classic:dist/$asset")"
           done
           test "$(git hash-object dist/classic/index.html)" = "$(git rev-parse "$classic:dist/index.html")"
-          grep -Fq 'href="/classic/"' dist/index.html
+          grep -Fq 'href="./classic/"' dist/index.html
           touch dist/.nojekyll
-          printf '%s\n' 'cloakyoursecrets.com' > dist/CNAME
       - uses: actions/upload-artifact@v4
         with:
           name: CloakYourSecrets-modern
@@ -58,7 +59,8 @@ jobs:
           include-hidden-files: true
 
       - name: Stage production branch (one-time release)
-        if: github.event.head_commit.message == 'CYS-009: Stage validated production site with preserved Classic'
+        if: >-
+          github.event.head_commit.message == 'CYS-009: Fix release packaging and stage production branch'
         run: |
           set -euo pipefail
           release=release/cys-009
