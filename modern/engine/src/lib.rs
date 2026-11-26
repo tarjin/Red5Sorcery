@@ -547,7 +547,7 @@ fn cover_plan(w:u32,h:u32,orientation:u16)->Option<(u32,u32,u32,u32)> {
     let pixels=u64::from(w)*u64::from(h);
     let (x,y)=if pixels>90_000_000 {
         // Use tested Large reference pixel budget, independent of aspect ratio.
-        let scale=(84_651_648f64 / pixels as f64).sqrt();
+        let scale=(84_652_032f64 / pixels as f64).sqrt();
         (((w as f64*scale).floor() as u32).max(1),((h as f64*scale).floor() as u32).max(1))
     } else {(w,h)};
     Some((w,h,x,y))
