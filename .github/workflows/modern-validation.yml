@@ -1,0 +1,42 @@
+name: CloakYourSecrets modernization validation
+on:
+  push:
+    branches: ['review/modernization']
+    paths: ['modern/**', '.github/workflows/modern-validation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Native regression
+        run: cargo test --locked --manifest-path modern/engine/Cargo.toml
+      - name: Compile WebAssembly
+        run: cargo build --locked --release --target wasm32-unknown-unknown --manifest-path modern/engine/Cargo.toml
+      - name: Generate matching browser bindings
+        run: |
+          cargo install wasm-bindgen-cli --version 0.2.100 --locked
+          wasm-bindgen --target web --out-dir modern/pkg modern/engine/target/wasm32-unknown-unknown/release/rqsm.wasm
+      - name: JavaScript syntax
+        run: |
+          node --check modern/app.mjs
+          node --check modern/processor.mjs
+          node --check modern/services.mjs
+          node --check modern/cloudflare/worker.mjs
+      - name: Assemble static package
+        run: |
+          mkdir -p dist
+          cp modern/index.html modern/*.mjs modern/announcements.json modern/favicon.svg modern/CloakYourSecrets_Help.pdf dist/
+          cp -r modern/pkg dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CloakYourSecrets-modern
+          path: dist/
