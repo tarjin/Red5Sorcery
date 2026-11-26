@@ -5,7 +5,10 @@ use regex::Regex;
 use base64::{engine::general_purpose, Engine as _};
 fn build_header(author_note: &str, zip_filename: &str, base64_zip: &[u8]) -> Vec<u8> {
     // 1. UTC timestamp (format: YYYYMMDDHHMMSS, 14 digits)
+    #[cfg(target_arch = "wasm32")]
     let iso_string = js_sys::Date::new_0().to_iso_string().as_string().unwrap();
+    #[cfg(not(target_arch = "wasm32"))]
+    let iso_string = "2026-11-26T00:00:00.000Z".to_string();
     let cleaned = iso_string
         .replace("T", "")
         .replace(":", "")
@@ -239,6 +242,7 @@ fn cloak_zip_to_images(
 
 
     // Step 5: Split the composite into v1 (color) and v2 (grayscale)
+    drop(shuffled_indices);
     let (img1, img2) = split_and_save_fragments(&composite);
 
     Ok((img1, img2))
@@ -449,7 +453,7 @@ fn capacity(w: u32, h: u32) -> Result<usize, JsValue> {
     let cw = w.checked_mul(2).ok_or_else(|| error("Image dimensions overflow."))?;
     if w == 0 || h == 0 || cw == h { return Err(error("Unsupported image dimensions.")); }
     let pixels = (cw as usize).checked_mul(h as usize).ok_or_else(|| error("Image dimensions overflow."))?;
-    if pixels < 801 || pixels > 180_000_000 { return Err(error("Image exceeds review-build pixel limits or is too small.")); }
+    if pixels < 801 || pixels > 180_000_000 { return Err(error("Image exceeds supported pixel limits or is too small.")); }
     Ok((pixels - 1) / 2)
 }
 
@@ -538,7 +542,7 @@ fn orient_cover(img: DynamicImage, orientation: u16) -> DynamicImage {
 
 #[wasm_bindgen]
 pub fn cloak_local(zip: &[u8], filename: &str, cover: &[u8], note: &str) -> Result<js_sys::Array, JsValue> {
-    if zip.is_empty() || zip.len() > 40_000_000 { return Err(error("ZIP size outside supported review range.")); }
+    if zip.is_empty() || zip.len() > 40_000_000 { return Err(error("ZIP size outside supported range.")); }
     if filename.is_empty() || filename.len() > 100 || note.trim().len() > 100 { return Err(error("Filename or author note exceeds 100 UTF-8 bytes.")); }
     if !filename.to_ascii_lowercase().ends_with(".zip") || filename.contains('/') || filename.contains('\\') { return Err(error("Invalid ZIP filename.")); }
     if !zip.starts_with(b"PK\x03\x04") && !zip.starts_with(b"PK\x05\x06") { return Err(error("ZIP signature not recognized.")); }
@@ -560,12 +564,14 @@ pub fn decloak_local(colour: &[u8], gray: &[u8]) -> Result<js_sys::Array, JsValu
     if a.dimensions() != b.dimensions() { return Err(error("Image dimensions differ.")); }
     let cap = capacity(a.width(), a.height())?;
     let composite = reconstruct_composite_image(&a, &b);
+    drop(a); drop(b);
     let (_, indices, _) = compute_anchor_seed_and_shuffle(&composite);
     let header = extract_bits_lsb(&composite, 400, &indices);
     let fields = parse_and_validate_header(&header).map_err(|_| error("Invalid metadata; check the original image pair and order."))?;
     let total = 400usize.checked_add(fields.payload_size).ok_or_else(|| error("Invalid payload length."))?;
     if total > cap || fields.payload_size > 53_333_336 { return Err(error("Invalid or unsupported payload size.")); }
     let stream = extract_bits_lsb(&composite, total, &indices);
+    drop(indices); drop(composite);
     let zip = general_purpose::STANDARD.decode(&stream[400..]).map_err(|_| error("Recovery failed: invalid payload."))?;
     if !zip.starts_with(b"PK\x03\x04") && !zip.starts_with(b"PK\x05\x06") { return Err(error("Recovered ZIP signature not recognized.")); }
     let result = js_sys::Array::new();
@@ -586,6 +592,20 @@ mod modern_tests {
                 assert!(write_capacity(x,y).unwrap() >= 400 + ((n+2)/3)*4);
             }
         }
+    }
+    #[test]
+    fn classic_format_roundtrip() {
+        let img = DynamicImage::ImageRgba8(RgbaImage::from_fn(64,48, |x,y| Rgba([(x*3) as u8,(y*5) as u8,123,255])));
+        let raw = b"PK\x05\x06\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+        let encoded = general_purpose::STANDARD.encode(raw);
+        let (a,b) = cloak_zip_to_images(&img,"Diary.zip",encoded.as_bytes(),"Test note").unwrap();
+        let c = reconstruct_composite_image(&a,&b);
+        let (_,idx,_) = compute_anchor_seed_and_shuffle(&c);
+        let h = parse_and_validate_header(&extract_bits_lsb(&c,400,&idx)).unwrap();
+        assert_eq!(h.filename,"Diary.zip");
+        assert_eq!(h.author_note,"Test note");
+        let stream = extract_bits_lsb(&c,400+h.payload_size,&idx);
+        assert_eq!(general_purpose::STANDARD.decode(&stream[400..]).unwrap(),raw);
     }
     #[test]
     fn orientation_dimensions_and_pixels() {
