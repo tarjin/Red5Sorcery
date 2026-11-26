@@ -1,6 +1,6 @@
 const $=id=>document.getElementById(id);
 const selected=kind=>document.querySelector('[data-kind="'+kind+'"]').files[0];
-const status=(m)=>{const line=document.createElement('div');line.textContent=m;$('log').append(line);$('status').textContent=m;$('log').scrollTop=$('log').scrollHeight;};
+const status=(m)=>globalThis.CYS_LOG(m);
 let worker,ready=false,busy=false,id=0,active=null,urls={cloak:[],decloak:[]};
 const outcomes={cloak:null,decloak:null};let clock;
 const elapsed=()=>Math.floor((performance.now()-(active?.started??performance.now()))/1000);
