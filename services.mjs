@@ -1,0 +1,12 @@
+// Separate online services. Never receives files, filenames or author notes.
+const endpoint=document.querySelector('meta[name="cys-service-url"]')?.content.trim()||'';
+const configured=endpoint.startsWith('https://');
+async function send(path,payload){if(!configured)throw Error('Service unavailable');const res=await fetch(endpoint.replace(/\/$/,'')+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(10000)});if(!res.ok||!(await res.json()).ok)throw Error('Submission failed')}
+const events=new Set(['app_loaded','cloak_completed','decloak_completed','cloak_failed','decloak_failed']);
+globalThis.CYS_SERVICES={track(event,tier){if(!configured||!events.has(event))return;const data={event};if(event.startsWith('cloak_')&&['small','medium','large'].includes(tier))data.tier=tier;void send('/usage',data).catch(()=>{})}};
+for(const [id,path] of [['feedbackForm','/feedback'],['licenseForm','/licensing']]){
+ const form=document.getElementById(id),button=form.querySelector('[type=submit]'),status=form.querySelector('[role=status]');
+ if(path==='/feedback'){const comment=form.elements.comment;const check=()=>comment.setCustomValidity(comment.value.trim().length<15?'Enter at least 15 characters, excluding surrounding whitespace.':'');comment.addEventListener('input',check);form.addEventListener('reset',()=>comment.setCustomValidity(''));}if(!configured)continue;button.disabled=false;status.textContent='';
+ form.addEventListener('submit',async e=>{e.preventDefault();if(path==='/feedback'){const c=form.elements.comment;c.setCustomValidity(c.value.trim().length<15?'Enter at least 15 characters, excluding surrounding whitespace.':'');}if(button.disabled||!form.reportValidity())return;const d=new FormData(form);const payload=path==='/feedback'?{score:Number(d.get('score')),comment:String(d.get('comment')).trim()}:{name:String(d.get('name')).trim(),email:String(d.get('email')).trim(),organization:String(d.get('organization')).trim(),message:String(d.get('message')).trim()};button.disabled=true;status.textContent='Submitting…';try{await send(path,payload);form.reset();status.textContent=path==='/feedback'?'Thank you for your feedback.':'Your inquiry has been received.'}catch{status.textContent='Submission failed. Your entries have been retained; please try again.'}finally{button.disabled=false}});
+}
+globalThis.CYS_SERVICES.track('app_loaded');
