@@ -540,6 +540,34 @@ fn orient_cover(img: DynamicImage, orientation: u16) -> DynamicImage {
     }
 }
 
+// CYS-006C: inspect compressed headers before decoding; preserve aspect ratio.
+fn cover_plan(w:u32,h:u32,orientation:u16)->Option<(u32,u32,u32,u32)> {
+    if w==0 || h==0 || u64::from(w)*u64::from(h)>200_000_000 {return None;}
+    let (w,h)=if orientation>=5 {(h,w)} else {(w,h)};
+    let pixels=u64::from(w)*u64::from(h);
+    let (x,y)=if pixels>90_000_000 {
+        // Use tested Large reference pixel budget, independent of aspect ratio.
+        let scale=(84_651_648f64 / pixels as f64).sqrt();
+        (((w as f64*scale).floor() as u32).max(1),((h as f64*scale).floor() as u32).max(1))
+    } else {(w,h)};
+    Some((w,h,x,y))
+}
+fn inspect_cover(cover:&[u8])->Result<(u32,u32,u32,u32),JsValue> {
+    if cover.len()>100_000_000 {return Err(error("Cover image exceeds 100 MB input limit."));}
+    match image::guess_format(cover) {Ok(image::ImageFormat::Png|image::ImageFormat::Jpeg)=>{},_=>return Err(error("Cover must be PNG or JPEG."))}
+    let reader=image::io::Reader::new(std::io::Cursor::new(cover)).with_guessed_format().map_err(|_|error("Cover image could not be decoded."))?;
+    let (w,h)=reader.into_dimensions().map_err(|_|error("Cover image could not be decoded."))?;
+    let plan=cover_plan(w,h,cover_orientation(cover)).ok_or_else(||error("Cover image exceeds 200 megapixel input limit or has invalid dimensions."))?;
+    Ok(plan)
+}
+#[wasm_bindgen]
+pub fn inspect_cover_local(cover:&[u8])->Result<js_sys::Array,JsValue>{
+    let (w,h,x,y)=inspect_cover(cover)?;
+    let cap=zip_capacity(x,y)?;
+    let result=js_sys::Array::new();
+    for v in [w,h,x,y,cap] {result.push(&JsValue::from_f64(v as f64));}
+    Ok(result)
+}
 #[wasm_bindgen]
 pub fn cloak_local(zip: &[u8], filename: &str, cover: &[u8], note: &str) -> Result<js_sys::Array, JsValue> {
     if zip.is_empty() || zip.len() > 40_000_000 { return Err(error("ZIP size outside supported range.")); }
@@ -547,8 +575,17 @@ pub fn cloak_local(zip: &[u8], filename: &str, cover: &[u8], note: &str) -> Resu
     if !filename.to_ascii_lowercase().ends_with(".zip") || filename.contains('/') || filename.contains('\\') { return Err(error("Invalid ZIP filename.")); }
     if !zip.starts_with(b"PK\x03\x04") && !zip.starts_with(b"PK\x05\x06") { return Err(error("ZIP signature not recognized.")); }
     match image::guess_format(cover) { Ok(image::ImageFormat::Png | image::ImageFormat::Jpeg) => {}, _ => return Err(error("Cover must be PNG or JPEG.")) }
-    let img = orient_cover(load_from_memory(cover).map_err(|_| error("Cover image could not be decoded."))?, cover_orientation(cover));
-    let cap = write_capacity(img.width(), img.height())?;
+    let (w,h,x,y)=inspect_cover(cover)?;
+    let cap=write_capacity(x,y)?;
+    if 400+4*((zip.len()+2)/3)>cap {return Err(error("Cover image is too small for the selected ZIP. Consult Help for more information."));}
+    let orientation=cover_orientation(cover);
+    // Resize before rotating to avoid duplicating the full original raster.
+    let mut img=load_from_memory(cover).map_err(|_|error("Cover image could not be decoded."))?;
+    if (w,h)!=(x,y) {
+        let (rw,rh)=if orientation>=5 {(y,x)} else {(x,y)};
+        img=img.resize_exact(rw,rh,image::imageops::FilterType::Triangle);
+    }
+    let img=orient_cover(img,orientation);
     let encoded = general_purpose::STANDARD.encode(zip);
     if encoded.len() + 400 > cap { return Err(error("Cover image would exceed 65% pixel utilization.")); }
     let (colour, gray) = cloak_zip_to_images(&img, filename, encoded.as_bytes(), note).map_err(|_| error("Cloaking failed."))?;
@@ -592,6 +629,16 @@ mod modern_tests {
                 assert!(write_capacity(x,y).unwrap() >= 400 + ((n+2)/3)*4);
             }
         }
+    }
+    #[test]
+    fn cover_planning() {
+        assert_eq!(cover_plan(7968,10624,1),Some((7968,10624,7968,10624)));
+        let (w,h,x,y)=cover_plan(10860,14480,1).unwrap();
+        assert_eq!((w,h),(10860,14480)); assert!(u64::from(x)*u64::from(y)<=90_000_000);
+        assert!((i64::from(x)*4-i64::from(y)*3).abs()<=4);
+        assert!(write_capacity(x,y).unwrap()>=400+4*((40_000_000usize+2)/3));
+        assert_eq!(cover_plan(4096,3072,6),Some((3072,4096,3072,4096)));
+        assert!(cover_plan(20000,20000,1).is_none());
     }
     #[test]
     fn classic_format_roundtrip() {
