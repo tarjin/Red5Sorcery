@@ -36,6 +36,21 @@ jobs:
           mkdir -p dist
           cp modern/index.html modern/*.mjs modern/announcements.json modern/favicon.svg modern/CloakYourSecrets_Help.pdf dist/
           cp -r modern/pkg dist/
+      - name: Preserve exact Classic deployment
+        run: |
+          set -euo pipefail
+          classic=ace6576e9979d624f078121419a19b5db2c8ad76
+          git fetch --no-tags --depth=1 origin "$classic"
+          mkdir -p dist/classic
+          git show "$classic:index.html" > dist/classic/index.html
+          for asset in rqsm-e2e46f1e71887d8a.js rqsm-e2e46f1e71887d8a_bg.wasm; do
+            test ! -e "dist/$asset"
+            git show "$classic:$asset" > "dist/$asset"
+            test "$(git hash-object "dist/$asset")" = "$(git rev-parse "$classic:$asset")"
+          done
+          test "$(git hash-object dist/classic/index.html)" = "$(git rev-parse "$classic:index.html")"
+          grep -Fq "href=\"/classic/\"" dist/index.html
+          touch dist/.nojekyll
       - uses: actions/upload-artifact@v4
         with:
           name: CloakYourSecrets-modern
