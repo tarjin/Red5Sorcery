@@ -449,15 +449,93 @@ fn capacity(w: u32, h: u32) -> Result<usize, JsValue> {
     let cw = w.checked_mul(2).ok_or_else(|| error("Image dimensions overflow."))?;
     if w == 0 || h == 0 || cw == h { return Err(error("Unsupported image dimensions.")); }
     let pixels = (cw as usize).checked_mul(h as usize).ok_or_else(|| error("Image dimensions overflow."))?;
-    if pixels < 801 || pixels > 120_000_000 { return Err(error("Image exceeds review-build pixel limits or is too small.")); }
+    if pixels < 801 || pixels > 180_000_000 { return Err(error("Image exceeds review-build pixel limits or is too small.")); }
     Ok((pixels - 1) / 2)
 }
+
+// New writes reserve at least 35% of eligible composite pixels.
+// Recovery deliberately retains full Classic capacity for legacy archives.
+fn write_capacity(w: u32, h: u32) -> Result<usize, JsValue> {
+    capacity(w, h)?;
+    let eligible = 2u64 * u64::from(w) * u64::from(h) - 1;
+    Ok(((eligible * 65 / 100) / 2) as usize)
+}
+#[wasm_bindgen]
+pub fn zip_capacity(w: u32, h: u32) -> Result<u32, JsValue> {
+    let bytes = write_capacity(w,h)?.saturating_sub(400);
+    Ok(((bytes / 4 * 3).min(40_000_000)) as u32)
+}
+
 fn png(img: RgbaImage) -> Result<js_sys::Uint8Array, JsValue> {
     let mut bytes = Vec::new();
     img.write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageOutputFormat::Png)
         .map_err(|_| error("PNG encoding failed."))?;
     Ok(js_sys::Uint8Array::from(bytes.as_slice()))
 }
+
+// Only source covers are normalized. Never transform a recovery PNG.
+fn tiff_orientation(t: &[u8]) -> Option<u16> {
+    let little = match t.get(0..2)? { b"II" => true, b"MM" => false, _ => return None };
+    let u16at = |p: usize| -> Option<u16> {
+        let b: [u8;2] = t.get(p..p.checked_add(2)?)?.try_into().ok()?;
+        Some(if little { u16::from_le_bytes(b) } else { u16::from_be_bytes(b) })
+    };
+    let u32at = |p: usize| -> Option<u32> {
+        let b: [u8;4] = t.get(p..p.checked_add(4)?)?.try_into().ok()?;
+        Some(if little { u32::from_le_bytes(b) } else { u32::from_be_bytes(b) })
+    };
+    if u16at(2)? != 42 { return None; }
+    let ifd = u32at(4)? as usize;
+    let count = u16at(ifd)? as usize;
+    for i in 0..count {
+        let p = ifd.checked_add(2)?.checked_add(i.checked_mul(12)?)?;
+        if u16at(p)? == 0x0112 && u16at(p.checked_add(2)?)? == 3 && u32at(p.checked_add(4)?)? == 1 {
+            return u16at(p.checked_add(8)?).filter(|v| (1..=8).contains(v));
+        }
+    }
+    None
+}
+fn cover_orientation(bytes: &[u8]) -> u16 {
+    if bytes.starts_with(&[0xff,0xd8]) {
+        let mut p = 2usize;
+        while p < bytes.len() {
+            if bytes[p] != 0xff { break; }
+            while bytes.get(p) == Some(&0xff) { p += 1; }
+            let marker = match bytes.get(p) { Some(v) => *v, None => break };
+            p += 1;
+            if marker == 0xda || marker == 0xd9 { break; }
+            if marker == 0x01 || (0xd0..=0xd7).contains(&marker) { continue; }
+            let len = match bytes.get(p..p+2) { Some(b) => u16::from_be_bytes([b[0],b[1]]) as usize, None => break };
+            if len < 2 { break; }
+            let end = match p.checked_add(len) { Some(v) if v <= bytes.len() => v, _ => break };
+            let segment = &bytes[p+2..end];
+            if marker == 0xe1 && segment.starts_with(b"Exif\0\0") {
+                if let Some(v) = tiff_orientation(&segment[6..]) { return v; }
+            }
+            p = end;
+        }
+    } else if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        let mut p = 8usize;
+        while let Some(header) = bytes.get(p..p.saturating_add(8)) {
+            let len = u32::from_be_bytes([header[0],header[1],header[2],header[3]]) as usize;
+            let end = match p.checked_add(8).and_then(|v|v.checked_add(len)) { Some(v) if v <= bytes.len() => v, _ => break };
+            if &header[4..8] == b"eXIf" {
+                if let Some(v) = tiff_orientation(&bytes[p+8..end]) { return v; }
+            }
+            if &header[4..8] == b"IEND" { break; }
+            p = match end.checked_add(4) { Some(v) => v, None => break };
+        }
+    }
+    1
+}
+fn orient_cover(img: DynamicImage, orientation: u16) -> DynamicImage {
+    match orientation {
+        2 => img.fliph(), 3 => img.rotate180(), 4 => img.flipv(),
+        5 => img.rotate90().fliph(), 6 => img.rotate90(),
+        7 => img.rotate90().flipv(), 8 => img.rotate270(), _ => img
+    }
+}
+
 #[wasm_bindgen]
 pub fn cloak_local(zip: &[u8], filename: &str, cover: &[u8], note: &str) -> Result<js_sys::Array, JsValue> {
     if zip.is_empty() || zip.len() > 40_000_000 { return Err(error("ZIP size outside supported review range.")); }
@@ -465,10 +543,10 @@ pub fn cloak_local(zip: &[u8], filename: &str, cover: &[u8], note: &str) -> Resu
     if !filename.to_ascii_lowercase().ends_with(".zip") || filename.contains('/') || filename.contains('\\') { return Err(error("Invalid ZIP filename.")); }
     if !zip.starts_with(b"PK\x03\x04") && !zip.starts_with(b"PK\x05\x06") { return Err(error("ZIP signature not recognized.")); }
     match image::guess_format(cover) { Ok(image::ImageFormat::Png | image::ImageFormat::Jpeg) => {}, _ => return Err(error("Cover must be PNG or JPEG.")) }
-    let img = load_from_memory(cover).map_err(|_| error("Cover image could not be decoded."))?;
-    let cap = capacity(img.width(), img.height())?;
+    let img = orient_cover(load_from_memory(cover).map_err(|_| error("Cover image could not be decoded."))?, cover_orientation(cover));
+    let cap = write_capacity(img.width(), img.height())?;
     let encoded = general_purpose::STANDARD.encode(zip);
-    if encoded.len() + 400 > cap { return Err(error("Cover image has insufficient capacity for this archive.")); }
+    if encoded.len() + 400 > cap { return Err(error("Cover image would exceed 65% pixel utilization.")); }
     let (colour, gray) = cloak_zip_to_images(&img, filename, encoded.as_bytes(), note).map_err(|_| error("Cloaking failed."))?;
     let result = js_sys::Array::new();
     result.push(&png(colour)?); result.push(&png(gray)?);
@@ -496,4 +574,27 @@ pub fn decloak_local(colour: &[u8], gray: &[u8]) -> Result<js_sys::Array, JsValu
     result.push(&JsValue::from_str(&fields.filename));
     result.push(&JsValue::from_str(&fields.author_note));
     Ok(result)
+}
+
+#[cfg(test)]
+mod modern_tests {
+    use super::*;
+    #[test]
+    fn tier_reference_dimensions() {
+        for (w,h,n) in [(4096,3072,6_000_000usize),(7680,5760,20_000_000),(10624,7968,40_000_000)] {
+            for (x,y) in [(w,h),(h,w)] {
+                assert!(write_capacity(x,y).unwrap() >= 400 + ((n+2)/3)*4);
+            }
+        }
+    }
+    #[test]
+    fn orientation_dimensions_and_pixels() {
+        let raw = RgbaImage::from_fn(3,2,|x,y| Rgba([(x+3*y) as u8,0,0,255]));
+        let expected = [[0,1,2,3,4,5],[2,1,0,5,4,3],[5,4,3,2,1,0],[3,4,5,0,1,2],[0,3,1,4,2,5],[3,0,4,1,5,2],[5,2,4,1,3,0],[2,5,1,4,0,3]];
+        for o in 1..=8 {
+            let image = orient_cover(DynamicImage::ImageRgba8(raw.clone()),o).to_rgba8();
+            assert_eq!(image.dimensions(),if o>=5 {(2,3)} else {(3,2)});
+            assert_eq!(image.pixels().map(|p|p[0]).collect::<Vec<_>>(),expected[(o-1) as usize].to_vec());
+        }
+    }
 }
