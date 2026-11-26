@@ -224,7 +224,7 @@ fn cloak_zip_to_images(
 
 
     // Step 3: Generate pixel shuffle indices using anchor
-    let (_anchor_index, shuffled_indices, seed_string) =
+    let (_anchor_index, shuffled_indices, _seed_string) =
         compute_anchor_seed_and_shuffle(&composite);
 
     // debug
@@ -553,7 +553,7 @@ pub fn cloak_local(zip: &[u8], filename: &str, cover: &[u8], note: &str) -> Resu
     if encoded.len() + 400 > cap { return Err(error("Cover image would exceed 65% pixel utilization.")); }
     let (colour, gray) = cloak_zip_to_images(&img, filename, encoded.as_bytes(), note).map_err(|_| error("Cloaking failed."))?;
     let result = js_sys::Array::new();
-    result.push(&png(colour)?); result.push(&png(gray)?);
+    result.push(&JsValue::from(png(colour)?)); result.push(&JsValue::from(png(gray)?));
     Ok(result)
 }
 #[wasm_bindgen]
